@@ -1,0 +1,35 @@
+Q.Do you have a virtualized or cloud environment?
+Ans.Cloud Enviornment with AWS
+
+Q.How is workload spread across the application servers?
+Ans.Traffic would be devided on round robin basis on all the heathy web servers behind elastic load balancer. If we have users in multiple countries with very high load, We can create multiple elastic load balancers and forward the traffic from Route53 on the basis of lowest latency.
+Q.What runtime environment does the application require?
+Ans. Considering it is a PHP application with backend in MySQL. Below will be runtime requirements.
+1) php: To support php websites.
+2) httpd: Web Server 
+3) php-mysql: php plugin in order to connect to database.
+4) awslogs: AWS-Cloudwatch-LogAgent-Amazon's LogAgent in order to push logs from web server to cloud watch log group.
+ 
+Q.Which centralized logged system is being used?
+Ans. I am using Amazon CloudWatch Logs with 7 days retention policy, ELK stack can also be used for more advance monitoring and KPI reporting but it comes with a premium cost.
+Q.Which centralized monitoring system is being used?
+Ans. Amazon cloudWatch
+Q.Which clustered stateful technology is being used?
+Ans. I am using Amazon's Multi-AZ Deployment MySQL service.
+Q.What would you do to reduce your time spent on this weekly task? How would you handle building the entire environment from scratch? How would you handle adding components to support extra load?
+Ans.
+1) For the first time I will do all the provisioning manually, But for all the consecutive weeks I will generate a CloudFormation script from AWS CloudFormer for my current stack and use that CloudFormation script for any further provisioning of similar enviornment. In case there is any modification required, I will do it in CloudFormation script.
+2) Below are the major steps to follow for first time setup.
+	a) Create two security groups for DB and Web servers, where Web Servers will be open at port 80 and 22 and DB server will be open at 3306 and 22.
+	b) Create a Multi-AZ MySQL database service in private subnet with DB security group attached, also enable enhanced monitoring. 
+	c) Create an ec2 role with access to S3(Just in case we are using some content from S3 buckets in our Web App) and also attach CloudWatch log agent policies which is needed to push the logs from ec2 instance to cloudwatch log groups. The policies are mentioned below.
+	d) Generate a key-pair and use the same key-pair for all ec2 instances and share it with developers.
+	e) Launch an Amazon linux ec2 instance and setup all the above runtime enviornment in order to get up and running. Ensure all the configuration files are modified which includes awslogs config file, apache webserver config file and php config file which has database configuration. In DB Configuration the the database host will be the endpoint URL which I have got from AWS MySQL service after creation. Now create an image from this instance, this custom amazon machine image will be used in webserver autoscaling group.
+	f) Create an autoscaling group in public subnet for web servers, I will make sure that I am using my above custom image in the launch configuration of my web server autoscaling group. In the boostrap script, I will ensure that "yum update -y" is fired in order to keep all the runtime enviornment updated. I can also add a copy command in order to copy some neccessary content from S3 to some custom folder which will be used by Web Application.
+	g) For log monitoring, Create Cloud watch Log Group and alarms for 404 and other http errors, we can also create a metric for data transfer threshold in order to setup bandwidth usage alerts. These log groups will recieve logs from autoscaling web server group.
+	h) For instance monitoring I will ensure that detailed monitoring is switched on while creating the autoscaling group, Now i will already be having all the metrics reported to CloudWatch, I will just create a dashboard for monitoring. 
+	i) Create an Elastic load balancer for managing the traffic and attach the web servers autoscaling group to ELB.
+	j) SSH to DB server will not be allowed from internet, Developers will have to jump to the DB servers from Web Server or A bastion host with access to NAT Gateway can be provisioned for the same.
+3) For high load I have already used autoscaling group where I can define triggers for autoscale according to custom requirement. Easiest way would be to setup on CPU load basis. 
+
+For the first time setup it will take around 8 working hours for manually setting up the enviornment, I would consider additional 8-16 hours for troubleshooting various configurations in order to get centralised logging and monitoring worked. For creating cloudwatch dashboards another 4-8 hours. From the second time onwards, I can do it in within 4 Hours, As I would have a cloudformation script ready with me and I just had to launch the stack using that template. If there are some changes, that can be quickly done in the readymade script.
