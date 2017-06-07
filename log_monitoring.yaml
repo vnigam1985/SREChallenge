@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   OperatorEmail:
-    Description: Email address to notify if there are any scaling operations
+    Description: Email address to notify for any Alarm
     Type: String
 Resources:
   LogRole:
